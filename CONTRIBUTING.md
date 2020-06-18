@@ -1,6 +1,6 @@
 # Contributing to OpenLayers
 
-Thanks for your interest in contributing to OpenLayers.
+Thanks for your interest in contributing to OpenLayers.  Please see the project's [Code of Conduct](https://github.com/openlayers/openlayers/blob/master/CODE_OF_CONDUCT.md) before proceeding.
 
 ## Asking Questions
 
@@ -42,8 +42,7 @@ Your pull request must:
 
  * Follow OpenLayers's coding style.
 
- * Pass the integration tests run automatically by the CircleCI Continuous
-   Integration system.
+ * Pass the integration tests run automatically by the Continuous Integration system.
 
  * Address a single issue or add a single item of functionality.
 

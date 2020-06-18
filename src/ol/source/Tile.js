@@ -1,22 +1,25 @@
 /**
  * @module ol/source/Tile
  */
-import {abstract} from '../util.js';
+import Event from '../events/Event.js';
+import Source from './Source.js';
 import TileCache from '../TileCache.js';
 import TileState from '../TileState.js';
-import Event from '../events/Event.js';
+import {abstract} from '../util.js';
 import {equivalent} from '../proj.js';
-import {toSize, scale as scaleSize} from '../size.js';
-import Source from './Source.js';
 import {getKeyZXY, withinExtentAndZ} from '../tilecoord.js';
-import {wrapX, getForProjection as getTileGridForProjection} from '../tilegrid.js';
+import {
+  getForProjection as getTileGridForProjection,
+  wrapX,
+} from '../tilegrid.js';
+import {scale as scaleSize, toSize} from '../size.js';
 
 /**
  * @typedef {Object} Options
  * @property {import("./Source.js").AttributionLike} [attributions]
  * @property {boolean} [attributionsCollapsible=true] Attributions are collapsible.
  * @property {number} [cacheSize]
- * @property {boolean} [opaque]
+ * @property {boolean} [opaque=false] Whether the layer is opaque.
  * @property {number} [tilePixelRatio]
  * @property {import("../proj.js").ProjectionLike} [projection]
  * @property {import("./State.js").default} [state]
@@ -26,7 +29,6 @@ import {wrapX, getForProjection as getTileGridForProjection} from '../tilegrid.j
  * @property {string} [key]
  * @property {number} [zDirection=0]
  */
-
 
 /**
  * @classdesc
@@ -41,13 +43,12 @@ class TileSource extends Source {
    * @param {Options} options SourceTile source options.
    */
   constructor(options) {
-
     super({
       attributions: options.attributions,
       attributionsCollapsible: options.attributionsCollapsible,
       projection: options.projection,
       state: options.state,
-      wrapX: options.wrapX
+      wrapX: options.wrapX,
     });
 
     /**
@@ -60,8 +61,8 @@ class TileSource extends Source {
      * @private
      * @type {number}
      */
-    this.tilePixelRatio_ = options.tilePixelRatio !== undefined ?
-      options.tilePixelRatio : 1;
+    this.tilePixelRatio_ =
+      options.tilePixelRatio !== undefined ? options.tilePixelRatio : 1;
 
     /**
      * @protected
@@ -69,24 +70,24 @@ class TileSource extends Source {
      */
     this.tileGrid = options.tileGrid !== undefined ? options.tileGrid : null;
 
-    let cacheSize = options.cacheSize;
-    if (cacheSize === undefined) {
-      const tileSize = [256, 256];
-      const tileGrid = options.tileGrid;
-      if (tileGrid) {
-        toSize(tileGrid.getTileSize(tileGrid.getMinZoom()), tileSize);
-      }
-      const canUseScreen = typeof screen !== 'undefined';
-      const width = canUseScreen ? (screen.availWidth || screen.width) : 1920;
-      const height = canUseScreen ? (screen.availHeight || screen.height) : 1080;
-      cacheSize = 4 * Math.ceil(width / tileSize[0]) * Math.ceil(height / tileSize[1]);
+    const tileSize = [256, 256];
+    const tileGrid = options.tileGrid;
+    if (tileGrid) {
+      toSize(tileGrid.getTileSize(tileGrid.getMinZoom()), tileSize);
     }
+    const canUseScreen = typeof screen !== 'undefined';
+    const width = canUseScreen ? screen.availWidth || screen.width : 1920;
+    const height = canUseScreen ? screen.availHeight || screen.height : 1080;
+    const minCacheSize =
+      4 * Math.ceil(width / tileSize[0]) * Math.ceil(height / tileSize[1]);
 
     /**
      * @protected
      * @type {import("../TileCache.js").default}
      */
-    this.tileCache = new TileCache(cacheSize);
+    this.tileCache = new TileCache(
+      Math.max(minCacheSize, options.cacheSize || 0)
+    );
 
     /**
      * @protected
@@ -125,7 +126,7 @@ class TileSource extends Source {
 
   /**
    * @param {import("../proj/Projection.js").default} projection Projection.
-   * @param {!Object<string, import("../TileRange.js").default>} usedTiles Used tiles.
+   * @param {!Object<string, boolean>} usedTiles Used tiles.
    */
   expireCache(projection, usedTiles) {
     const tileCache = this.getTileCacheForProjection(projection);
@@ -156,10 +157,12 @@ class TileSource extends Source {
         tileCoordKey = getKeyZXY(z, x, y);
         loaded = false;
         if (tileCache.containsKey(tileCoordKey)) {
-          tile = /** @type {!import("../Tile.js").default} */ (tileCache.get(tileCoordKey));
+          tile = /** @type {!import("../Tile.js").default} */ (tileCache.get(
+            tileCoordKey
+          ));
           loaded = tile.getState() === TileState.LOADED;
           if (loaded) {
-            loaded = (callback(tile) !== false);
+            loaded = callback(tile) !== false;
           }
         }
         if (!loaded) {
@@ -208,7 +211,7 @@ class TileSource extends Source {
   }
 
   /**
-   * @inheritDoc
+   * @return {Array<number>} Resolutions.
    */
   getResolutions() {
     return this.tileGrid.getResolutions();
@@ -300,8 +303,8 @@ class TileSource extends Source {
    *     null if no tile URL should be created for the passed `tileCoord`.
    */
   getTileCoordForTileUrlFunction(tileCoord, opt_projection) {
-    const projection = opt_projection !== undefined ?
-      opt_projection : this.getProjection();
+    const projection =
+      opt_projection !== undefined ? opt_projection : this.getProjection();
     const tileGrid = this.getTileGridForProjection(projection);
     if (this.getWrapX() && projection.isGlobal()) {
       tileCoord = wrapX(tileGrid, tileCoord, projection);
@@ -317,9 +320,6 @@ class TileSource extends Source {
     this.tileCache.clear();
   }
 
-  /**
-   * @inheritDoc
-   */
   refresh() {
     this.clear();
     super.refresh();
@@ -334,9 +334,7 @@ class TileSource extends Source {
    * @param {import("../proj/Projection.js").default} projection Projection.
    */
   useTile(z, x, y, projection) {}
-
 }
-
 
 /**
  * @classdesc
@@ -349,7 +347,6 @@ export class TileSourceEvent extends Event {
    * @param {import("../Tile.js").default} tile The tile.
    */
   constructor(type, tile) {
-
     super(type);
 
     /**
@@ -358,9 +355,7 @@ export class TileSourceEvent extends Event {
      * @api
      */
     this.tile = tile;
-
   }
-
 }
 
 export default TileSource;
